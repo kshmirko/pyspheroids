@@ -4,7 +4,7 @@
 # Состав пакета
 This module 'libspheroids' is auto-generated with f2py (version:2).
 
-###Functions:
+### Functions:
 
 
   alloc_dls_array(key,keyel,key_alloc)
@@ -34,7 +34,7 @@ This module 'libspheroids' is auto-generated with f2py (version:2).
 	rrr,ar,ac = sizedis2(kn,cm,sm,rmm,rmin,rmax,nmd=len(cm))
 
 
-###COMMON blocks:
+### COMMON blocks:
 
   /us1/ us11(181,41)
 	
@@ -50,7 +50,7 @@ This module 'libspheroids' is auto-generated with f2py (version:2).
   
 	/us0/ usea(2,41)
 	
-###Fortran 90/95 modules:
+### Fortran 90/95 modules:
 
   mo_par_dls - kn1par,kr1par,km1par,krepar,kimpar,knpar,krpar,kmpar,kmd  
 	

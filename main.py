@@ -28,7 +28,8 @@ class Params:
 
 
 def main():
-  np.set_printoptions(precision=2, )
+  print(np.get_printoptions())
+  np.set_printoptions(precision=2, formatter={'all':lambda x:"%10.2e"%x} )
   print()
   print("==========================================================")
   print("= PythonFindSolution                                     =")
@@ -72,13 +73,18 @@ def main():
   print("Yc          : ", p.Yc)
   
   for i, _ in enumerate(c.Ym):
-    print("%13.3e %13.3e %7.2f"%(c.Ym[i], p.Yc[i], (c.Ym[i]-p.Yc[i])/c.Ym[i]*100))
+    print("%13.3e %13.3e %7.2f"%(c.Ym[i]*1e9, p.Yc[i]*1e9, (c.Ym[i]-p.Yc[i])/c.Ym[i]*100))
   
 
   
+  plt.figure()
+  plt.plot(np.r_[c.wavelengths, c.wavelengths[:2]], p.Yc, 'r.')
+  plt.plot(np.r_[c.wavelengths, c.wavelengths[:2]], c.Ym, 'bo')
+
   # освобождаем память
   libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
                                libspheroids.mo_dls.keyel,2)
+  plt.show()
   pass
 
 def load_config(config_modname):
@@ -108,11 +114,11 @@ def print_module_content(config):
       tmpval = getattr(config, name)
       if isinstance(tmpval, list):
         tmpval = np.array(tmpval)
-        
-      #if name == 'Ym':
-      #  tmpval = tmpval
-      setattr(config, name, tmpval)  
+
       print("{0:30s}\t=\t{1}".format(name, tmpval))
+      if name == 'Ym':
+        tmpval = tmpval*1e-9
+      setattr(config, name, tmpval)  
      
     
   print()
@@ -171,7 +177,7 @@ def objective_funct(x, grad, c, p):
   func_val = 0.0
   if c.discrepancy_kind == 0:
     
-    func_val = np.sum((p.Yc-c.Ym)**2)
+    func_val = np.sum(((np.log(p.Yc)-np.log(c.Ym))/np.log(c.Ym))**2)
     func_val = np.sqrt(func_val/(c.wavelengths_count+
                                  c.extinction_count))
   func_val = func_val * 100

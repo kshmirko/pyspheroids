@@ -78,8 +78,8 @@ def main():
 
   
   plt.figure()
-  plt.plot(np.r_[c.wavelengths, c.wavelengths[:2]], p.Yc, 'r.')
-  plt.plot(np.r_[c.wavelengths, c.wavelengths[:2]], c.Ym, 'bo')
+  plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], p.Yc, 'r.')
+  plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], c.Ym, 'bo')
 
   # освобождаем память
   libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
@@ -159,7 +159,7 @@ def objective_funct(x, grad, c, p):
     libspheroids.optchar(libspheroids.mo_dls.ndp)
     
     if b_print == True:
-      print("DONE")
+      print("...DONE")
       b_print = False
     p.Ext[i] = libspheroids.mo_dls.xext
     p.Absb[i] = libspheroids.mo_dls.xabs
@@ -174,6 +174,7 @@ def objective_funct(x, grad, c, p):
   for i in range(A, B):
     p.Yc[i] = p.Ext[i-A]
   
+  # инициализируем новую переменную
   func_val = 0.0
   if c.discrepancy_kind == 0:
     
@@ -184,6 +185,8 @@ def objective_funct(x, grad, c, p):
   #print(func_val)
   return func_val
   
+
   
 if __name__ == '__main__':
+  # Вызов главной функции
   main()

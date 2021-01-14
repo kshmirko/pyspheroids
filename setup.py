@@ -8,8 +8,8 @@ extension = Extension(name='libspheroids',
                                  #'src/lognormal.f90',
                                  'src/mo_intrpl_linear.f90',
                                  'src/mo_intrpl_spline.f90',
-                                 'src/DLS_fixget.f',
-                                 'src/DLS_intrpl.f',
+                                 'src/DLS_fixget.f90',
+                                 'src/DLS_intrpl.f90',
                                  'src/DLS_optchr.f90',
                                  'src/DLS_read_input.f90',
                                  'src/phase_func.f90',
@@ -18,7 +18,7 @@ extension = Extension(name='libspheroids',
                         #extra_f90_compile_args=['-fdefault-real-8'],
                         #extra_f77_compile_args=['-fdefault-real-8'],
                     )
-                             
+
 if __name__ == "__main__":
     from numpy.distutils.core import setup
     setup(name = 'f2py_example',

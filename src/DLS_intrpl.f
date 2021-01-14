@@ -103,8 +103,7 @@
 	  
       real  WAVEL, dlnr 
       real  RATIO(KR1par)
-      dimension grid1(KN1par)
-     &         ,ANGLE1(KMpar)
+      dimension grid1(KN1par),ANGLE1(KMpar)
       real USEA,US11,US12,US22,US33,US34,US44
       COMMON /US1/ US11(KMpar,KNpar) 
       COMMON /US2/ US12(KMpar,KNpar)
@@ -125,8 +124,7 @@
       real time_begin, time_end, T_CPU
       real time_begin1, time_end1, T_CPU1
       real T_INT1,T_INT01
-	save WAVEL,KN1,grid1,KRE,KIM,ARE,AIM, dlnr
-     &  ,RATIO
+			save WAVEL,KN1,grid1,KRE,KIM,ARE,AIM, dlnr,RATIO
 	
 	
       PI=ACOS(-1.)

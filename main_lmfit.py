@@ -12,7 +12,9 @@ import sys
 import importlib
 import numpy as np
 from matplotlib import pyplot as plt
-import nlopt
+
+from lmfit import minimize, Parameters, fit_report
+
 import libspheroids
 from dataclasses import dataclass
 import contextlib
@@ -54,18 +56,13 @@ class Params:
         self.absorbption_coeff = np.zeros_like(self.extinction_coeff)
         self.backscatter_coeff = np.zeros_like(self.extinction_coeff)
         self.lidar_depol_ratio = np.zeros_like(self.extinction_coeff)
-        self.calc_vector = np.zeros_like(self.extinction_coeff)
+        self.calc_vector = np.zeros(self.n_coefs*2, dtype='float64')
         self.meas_vector = np.zeros_like(self.extinction_coeff)
         self.back_lidar_ratio = np.zeros_like(self.extinction_coeff)
 
 
-def load_config(config_modname):
-    try:
-        config = importlib.import_module(config_modname)
-    except Exception as e:
-        print(e)
-    print_module_content(config)
-    return config
+def ln_funct(x, lnN, sigma, rm):
+    return np.exp(lnN)/(np.sqrt(2*np.pi)*sigma)*np.exp(-0.5*((np.log(x)-np.log(rm))/sigma)**2)
 
 def load_config_yaml(yaml_fname):
     """
@@ -88,11 +85,25 @@ def load_config_yaml(yaml_fname):
     finally:
         for key, val in ctx.items():
             setattr(config, key, val)
-    
-    print_module_content(config)
     return config
-            
 
+def prepare_dataset(c):
+    """
+    Подготовка данных:
+    1.  вычисление параметра ангстрема и выполнение инерполяции 
+        коэффициентов обратного рассеяния на 6 точек
+    2.  вычисление параметра ангстрема и выполнение инерполяции 
+        коэффициентов ослабления на 6 точек
+    
+    Итого вместо 5 уравнений будем иметь 12 (по 6 на кадый коэффициент)
+    """
+    setattr(c,'c1',np.polyfit(np.log(c.wavelengths), np.log(c.meas_vector[:3]), deg=1))
+    setattr(c,'c2',np.polyfit(np.log(c.wavelengths[:2]), np.log(c.meas_vector[-2:]), deg=1))
+    y1 = np.exp(np.polyval(c.c1, np.log(c.interp_wavelengths)))
+    y2 = np.exp(np.polyval(c.c2, np.log(c.interp_wavelengths)))
+    setattr(c,'meas_vector_interp', np.r_[y1, y2])
+    
+    
 def print_module_content(config):
   # печатаем параметры запуска
     print()
@@ -116,55 +127,81 @@ def print_module_content(config):
     print()
 
 
-def display_solution(c, p):
+def display_solution(c, p, xopt):
     """docstring for display_solution"""
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
+    fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharex=True)
     
-    ax1.semilogy(c.wavelengths, p.calc_vector[:3], 'b')
-    ax1.semilogy(c.wavelengths, c.meas_vector[:3],'bo')
+    
+    ax1.semilogy(c.interp_wavelengths, p.calc_vector[:6], 'b')
+    ax1.semilogy(c.interp_wavelengths, c.meas_vector_interp[:6],'bo')
     #print(c.wavelengths[:2], p.calc_vector[-2:], c.meas_vector[-2:])
-    ax2.semilogy(c.wavelengths[:2], p.calc_vector[-2:],'g')
-    ax2.semilogy(c.wavelengths[:2], c.meas_vector[-2:], 'go')
+    ax2.semilogy(c.interp_wavelengths, p.calc_vector[6:],'g')
+    ax2.semilogy(c.interp_wavelengths, c.meas_vector_interp[6:], 'go')
+    
+    ax3.plot(c.interp_wavelengths, p.calc_vector[6:]/p.calc_vector[:6], 'r')
+    ax3.plot(c.interp_wavelengths, c.meas_vector_interp[6:]/c.meas_vector_interp[:6], 'ro')
+    rr = np.logspace(np.log10(c.r_min), np.log10(c.r_max), 50)
+    
     #plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], p.calc_vector, 'r.')
     #plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], c.meas_vector, 'bo')
     
     ax1.set_xlabel('Wavelength, nm')
     ax1.set_ylabel(r'Backscatter coeff. 1/km $\times$ sr', color='b')
+    ax1.grid()
     ax2.set_ylabel('Extinction coeff. 1/km', color='g')
-
-    y_labels = ax1.get_yticks()
-    ax1.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-    ax1.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
-    
-    
-    y_labels = ax2.get_yticks()
-    ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-    ax2.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
-    
-    plt.grid(which='both')
+    ax2.grid()
+    ax3.set_ylabel('Lidar ratio sr', color='r')
+    ax3.grid()
+    # y_labels = ax1.get_yticks()
+#     ax1.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
+#     ax1.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
+#
+#
+#     y_labels = ax2.get_yticks()
+#     ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
+#     ax2.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
+#
+    #plt.grid(which='both')
     plt.tight_layout()
-    
+    _, ax4 = plt.subplots(1,1)
+    ax4.semilogx(rr, ln_funct(rr, xopt.params['lnN1'].value, xopt.params['sigma1'].value, xopt.params['rm1'].value),
+        rr, ln_funct(rr, xopt.params['lnN2'].value, xopt.params['sigma2'].value, xopt.params['rm2'].value),
+        libspheroids.mo_dls.rrr, libspheroids.mo_dls.sd)
+    ax4.grid()
+    print(c.interp_wavelengths)
+    print(p.lidar_depol_ratio)
+    print(p.back_lidar_ratio)
     plt.show()
 
-def objective_funct(x, grad, c, p):
+
+def objective_funct(params, c, p):
     """
     x     - вектор параметров
-    grad  - Якобиан
     c     - конфигурационные параметры из файла (config.py)
     p     - параметры для расчета оптических свойств (структура)
     """
 
     # Если выбрали логнормальное распределение, то
     # число параметров в векторе x должно быть равно 5
-    if c.funct_type == 0 and len(x) == 5:
+    lnN1 = params['lnN1']
+    sigma1 = params['sigma1']
+    rm1 = params['rm1']
+    lnN2 = params['lnN2']
+    sigma2 = params['sigma2']
+    rm2 = params['rm2']
+    rn = params['rn']
+    rk = params['rk']
+    
+    if c.funct_type == 0:
 
-        rr, ar, ac = libspheroids.sizedis2(-c.knots_count, [np.exp(x[0])    ],
-                                           [x[1]], [x[2]], c.r_min, c.r_max)
-        libspheroids.mo_dls.rn.flat[0] = x[3]
-        libspheroids.mo_dls.rk.flat[0] = x[4]
-        libspheroids.mo_dls.sd[:] = ar[:]
-        libspheroids.mo_dls.rrr[:] = rr[:]
+        rr1, ar1, ac1 = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1) ],
+                                           [sigma1], [rm1], c.r_min, c.r_max)
+        _, ar2, _ = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN2) ],
+                                           [sigma2], [rm2], c.r_min, c.r_max)
+        libspheroids.mo_dls.rn.flat[0] = rn
+        libspheroids.mo_dls.rk.flat[0] = np.exp(rk)
+        libspheroids.mo_dls.sd[:] = ar1[:]+ar2[:]
+        libspheroids.mo_dls.rrr[:] = rr1[:]
     else:
         raise Exception("Неверный funct_type или размер вектроа x")
 
@@ -172,7 +209,7 @@ def objective_funct(x, grad, c, p):
 
     # для каждой длины волны из нашего списка вычисляем коэффициент
     # обратого рассеяния и ослабления, а также деполяризаионное отношение
-    for i, wl in enumerate(c.wavelengths):
+    for i, wl in enumerate(c.interp_wavelengths):
         if libspheroids.mo_dls.ndp == 0:
             print("LOADING DATABASE OF SPHEROIDS...")
             b_print = True
@@ -188,23 +225,23 @@ def objective_funct(x, grad, c, p):
         p.absorbption_coeff[i] = libspheroids.mo_dls.xabs
         p.backscatter_coeff[i] = libspheroids.mo_dls.xext / libspheroids.mo_dls.xblr
         p.lidar_depol_ratio[i] = libspheroids.mo_dls.xldr
-        p.calc_vector[i] = p.backscatter_coeff[i]
+        
         p.back_lidar_ratio[i] = libspheroids.mo_dls.xblr
-
-    A, B = c.wavelengths_count, c.extinction_count+c.wavelengths_count
-
-    for i in range(A, B):
-        p.calc_vector[i] = p.extinction_coeff[i-A]
+     
+    p.calc_vector[:] = np.r_[p.backscatter_coeff[:], p.extinction_coeff[:]]
 
     # инициализируем новую переменную
-    func_val = 0.0
-    if c.discrepancy_kind == 0:
-        func_val = np.sum(((np.log(p.calc_vector)-np.log(c.meas_vector))/np.log(c.meas_vector))**2)
-        func_val = np.sqrt(func_val/(c.wavelengths_count +
-                                     c.extinction_count))
-    func_val = func_val * 100
+    #func_val = 0.0
+    #if c.discrepancy_kind == 0:
+    #    func_val = np.sum(((np.log(p.calc_vector)-np.log(c.meas_vector))/np.log(c.meas_vector))**2)
+    #    func_val = np.sqrt(func_val/(c.wavelengths_count +
+    #                                 c.extinction_count))
+    #func_val = func_val * 100
+    func_val = ((p.calc_vector-c.meas_vector_interp))/(c.meas_vector_interp)
     return func_val
     
+    
+
 def main():
     """
     Основная функция
@@ -218,24 +255,34 @@ def main():
 
     config_modname = sys.argv[1]
     c = load_config_yaml(config_modname)
-    p = Params(5)
+    print_module_content(c)
+    prepare_dataset(c)
+    p = Params(6)
     
-    # Начальное решение
-    x = 0.5*(c.params_hi_boundary+c.params_lo_boundary)
-
+    
     # настройки солвера
-    #opt = nlopt.opt(nlopt.GN_CRS2_LM, 5)
-    opt = nlopt.opt(nlopt.GN_ESCH, 5)
-    #opt = nlopt.opt(nlopt.GN_ISRES, 5)
-    opt.set_lower_bounds(c.params_lo_boundary)
-    opt.set_upper_bounds(c.params_hi_boundary)
+    # Параметры
+    params = Parameters()
+    params.add('lnN1', value=0.5*(c.lnN1_lo+c.lnN1_hi), min = c.lnN1_lo, max=c.lnN1_hi,
+                brute_step = 0.25)
+    params.add('sigma1', value=0.5*(c.sigma1_lo+c.sigma1_hi), min = c.sigma1_lo, max=c.sigma1_hi,
+                brute_step=0.065)
+    params.add('rm1', value=0.5*(c.rm1_lo+c.rm1_hi), min = c.rm1_lo, max=c.rm1_hi, 
+                brute_step=0.109)
+    params.add('lnN2', value=0.5*(c.lnN2_lo+c.lnN2_hi), min = c.lnN2_lo, max=c.lnN2_hi,
+                brute_step = 0.25)
+    params.add('sigma2', value=0.5*(c.sigma2_lo+c.sigma2_hi), min = c.sigma2_lo, max=c.sigma2_hi,
+                brute_step=0.065)
+    params.add('rm2', value=0.5*(c.rm2_lo+c.rm2_hi), min = c.rm2_lo, max=c.rm2_hi, 
+                brute_step=0.109)
+    params.add('rn', value=0.5*(c.rn_lo+c.rn_hi), min = c.rn_lo, max=c.rn_hi,
+                brute_step=0.5)
+    params.add('rk', 0.5*(c.lnrk_lo+c.lnrk_hi), min = c.lnrk_lo, max=c.lnrk_hi,
+                brute_step=2.6)
     
-    # передаем в качестве cost function нашу функцию, предварительно обернув ее 
-    # замыканием
-    opt.set_min_objective(lambda x, grad: objective_funct(x, grad, c, p))
+    #аргументы
+    args = (c, p)
     
-    opt.set_maxeval(c.iterations_count)
-    opt.set_population(c.generations_count)
 
     # читаем файл с настройками
     libspheroids.dls_read_input(c.input_fname)
@@ -243,34 +290,62 @@ def main():
     libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
                                  libspheroids.mo_dls.keyel, 1)
 
-    xopt = opt.optimize(x)
-    fval = objective_funct(xopt, None, c, p)
-    xopt[0] = np.exp(xopt[0])
+    #xopt = minimize(objective_funct, params, args=args, method='emcee', \
+    #                 float_behavior='chi2',\
+    #                 burn=70, is_weighted=True, steps=1000, nwalkers=100)
+    
+    xopt = minimize(objective_funct, params, args=args, method='dual_annealing',
+                    no_local_search=False)
+    
+    
+    
+    
+    #xopt = minimize(objective_funct, params, args=args, method='brute')
+    
+    print(fit_report(xopt))
+    fval = objective_funct(xopt.params,  c, p)
+    
+
     print()
     print(" ==============================")
     print(" =   Результаты расчетов.     =")
     print(" ==============================")
     print()
-
+    
     with printoptions(formatter={'float': '{: 0.2e}'.format}):
-        print("Fmin  value : ", fval)
-        print("Xoptimal    : ", xopt)
-        print("meas_vect.  : ", c.meas_vector)
-        print("calc_vect.  : ", p.calc_vector)
+        print("Fmin  value (R^2): ", (fval*fval).sum())
+        print()
+        print("Optimal parameters:")
+        print("-------------------")
         
+        xopt.params.pretty_print()
+        print()
+        print("{0:20s}|{1:20s}|{2:20s}".format("meas_vector","meas_vect. interp.","calc_vect."))
+        for i,_ in enumerate(p.calc_vector):
+            if i<len(c.meas_vector):
+                print("{0:20.3e} {1:20.3e} {2:20.3e}".format(c.meas_vector[i], 
+                    c.meas_vector_interp[i], p.calc_vector[i]))
+            else:
+                print("{0:>20s} {1:20.3e} {2:20.3e}".format("--", 
+                    c.meas_vector_interp[i], p.calc_vector[i]))
+        # print("meas_vect.           : ", c.meas_vector)
+#         print("meas_vect. interp.   : ", c.meas_vector_interp[:6])
+#         print("                     : ", c.meas_vector_interp[6:])
+#         print("calc_vect.           : ", p.calc_vector)
+    
     print()
     print("%13s|%13s|%13s"%("A=meas_vect.","B=calc_vect.","(A-B)/A*100%" ))
-    for i, _ in enumerate(c.meas_vector):
-        print("%13.3e|%13.3e|%7.2f" % (c.meas_vector[i]*1e9, p.calc_vector[i]*1e9,
-                                       (c.meas_vector[i]-p.calc_vector[i])/c.meas_vector[i]*100)
-              )
+    for i, _ in enumerate(c.meas_vector_interp):
+        print("%13.3e|%13.3e|%7.2f" % (c.meas_vector_interp[i]*1e9, p.calc_vector[i]*1e9,
+                                        (c.meas_vector_interp[i]-p.calc_vector[i])/c.meas_vector_interp[i]*100)
+                                        )
 
     
 
     # освобождаем память
     libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
                                  libspheroids.mo_dls.keyel, 2)
-    display_solution(c, p)
+    display_solution(c, p, xopt)
     
     
 

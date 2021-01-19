@@ -129,45 +129,50 @@ def print_module_content(config):
 
 def display_solution(c, p, xopt):
     """docstring for display_solution"""
-    fig, (ax1, ax2, ax3) = plt.subplots(3,1, sharex=True)
+    grid = plt.GridSpec(3,2)
+    plt.subplot(grid[0,0])
+    plt.semilogy(c.interp_wavelengths, p.calc_vector[:6], 'b')
+    plt.semilogy(c.interp_wavelengths, c.meas_vector_interp[:6],'bo')
+    plt.ylabel(r'Back. coeff. 1/km $\times$ sr', color='b')
+    plt.grid(which='major')
+    plt.grid(which='minor', linestyle=':')
     
-    
-    ax1.semilogy(c.interp_wavelengths, p.calc_vector[:6], 'b')
-    ax1.semilogy(c.interp_wavelengths, c.meas_vector_interp[:6],'bo')
     #print(c.wavelengths[:2], p.calc_vector[-2:], c.meas_vector[-2:])
-    ax2.semilogy(c.interp_wavelengths, p.calc_vector[6:],'g')
-    ax2.semilogy(c.interp_wavelengths, c.meas_vector_interp[6:], 'go')
+    plt.subplot(grid[1,0])
+    plt.semilogy(c.interp_wavelengths, p.calc_vector[6:],'g')
+    plt.semilogy(c.interp_wavelengths, c.meas_vector_interp[6:], 'go')
+    plt.ylabel(r'Ext. coeff. 1/km', color='g')
+    plt.grid(which='major')
+    plt.grid(which='minor', linestyle=':')
     
-    ax3.plot(c.interp_wavelengths, p.calc_vector[6:]/p.calc_vector[:6], 'r')
-    ax3.plot(c.interp_wavelengths, c.meas_vector_interp[6:]/c.meas_vector_interp[:6], 'ro')
+    
+    plt.subplot(grid[2,0])
+    plt.plot(c.interp_wavelengths, p.calc_vector[6:]/p.calc_vector[:6], 'r')
+    plt.plot(c.interp_wavelengths, c.meas_vector_interp[6:]/c.meas_vector_interp[:6], 'ro')
+    plt.ylabel('LR ratio sr', color='r')
+    plt.grid(which='major')
+    plt.grid(which='minor', linestyle=':')
+    plt.xlabel('Wavelength, nm')
+    
+    plt.subplot(grid[0,1])
+    plt.plot(c.interp_wavelengths, p.lidar_depol_ratio, 'kd-')
+    plt.ylabel(r'lid. dep. rat., \%')
+    plt.xlabel('Wavelength, nm')
+    plt.grid(which='major')
+    plt.grid(which='minor', linestyle=':')
+    
     rr = np.logspace(np.log10(c.r_min), np.log10(c.r_max), 50)
+    plt.subplot(grid[1:,1])
+    plt.semilogx(rr, ln_funct(rr, xopt.params['lnN1'].value, xopt.params['sigma1'].value, xopt.params['rm1'].value), 'b-')
+    plt.semilogx(rr, ln_funct(rr, xopt.params['lnN2'].value, xopt.params['sigma2'].value, xopt.params['rm2'].value), 'g-')
+    plt.semilogx(libspheroids.mo_dls.rrr[:c.knots_count], libspheroids.mo_dls.sd[:c.knots_count], 'ro', mfc=None)
+    plt.ylabel(r'$\frac{dV}{d\ln r}$, $\frac{\mu m^3}{\mu m^3}$')
+    plt.xlabel(r'Radius, $\mu m$')
+    plt.grid(which='major')
+    plt.grid(which='minor', linestyle=':')
     
-    #plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], p.calc_vector, 'r.')
-    #plt.semilogy(np.r_[c.wavelengths, c.wavelengths[:2]], c.meas_vector, 'bo')
-    
-    ax1.set_xlabel('Wavelength, nm')
-    ax1.set_ylabel(r'Backscatter coeff. 1/km $\times$ sr', color='b')
-    ax1.grid()
-    ax2.set_ylabel('Extinction coeff. 1/km', color='g')
-    ax2.grid()
-    ax3.set_ylabel('Lidar ratio sr', color='r')
-    ax3.grid()
-    # y_labels = ax1.get_yticks()
-#     ax1.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-#     ax1.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
-#
-#
-#     y_labels = ax2.get_yticks()
-#     ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter('%0.0e'))
-#     ax2.yaxis.set_minor_formatter(ticker.FormatStrFormatter('%0.0e'))
-#
-    #plt.grid(which='both')
+    plt.suptitle('Lidar measurements processing results', fontsize="x-large")
     plt.tight_layout()
-    _, ax4 = plt.subplots(1,1)
-    ax4.semilogx(rr, ln_funct(rr, xopt.params['lnN1'].value, xopt.params['sigma1'].value, xopt.params['rm1'].value),
-        rr, ln_funct(rr, xopt.params['lnN2'].value, xopt.params['sigma2'].value, xopt.params['rm2'].value),
-        libspheroids.mo_dls.rrr, libspheroids.mo_dls.sd)
-    ax4.grid()
     print(c.interp_wavelengths)
     print(p.lidar_depol_ratio)
     print(p.back_lidar_ratio)
@@ -194,14 +199,17 @@ def objective_funct(params, c, p):
     
     if c.funct_type == 0:
 
-        rr1, ar1, ac1 = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1) ],
-                                           [sigma1], [rm1], c.r_min, c.r_max)
-        _, ar2, _ = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN2) ],
-                                           [sigma2], [rm2], c.r_min, c.r_max)
+        rr, ar, ac = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1), np.exp(lnN2)],
+                                            [sigma1, sigma2], [rm1, rm2], c.r_min, c.r_max)
+        # rr1, ar1, ac1 = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1) ],
+        #                                    [sigma1], [rm1], c.r_min, c.r_max)
+        # _, ar2, _ = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN2) ],
+        #                                    [sigma2], [rm2], c.r_min, c.r_max)
         libspheroids.mo_dls.rn.flat[0] = rn
         libspheroids.mo_dls.rk.flat[0] = np.exp(rk)
-        libspheroids.mo_dls.sd[:] = ar1[:]+ar2[:]
-        libspheroids.mo_dls.rrr[:] = rr1[:]
+        libspheroids.mo_dls.sd[:] = ar[:]
+        libspheroids.mo_dls.rrr[:] = rr[:]
+        
     else:
         raise Exception("Неверный funct_type или размер вектроа x")
 
@@ -294,10 +302,16 @@ def main():
     #                 float_behavior='chi2',\
     #                 burn=70, is_weighted=True, steps=1000, nwalkers=100)
     
-    xopt = minimize(objective_funct, params, args=args, method='dual_annealing',
-                    no_local_search=False)
+    # xopt = minimize(objective_funct, params, args=args, method='dual_annealing',
+    #                 no_local_search=False)
+    if c.solver['name']=='dual_annealing':
+        xopt = minimize(objective_funct, params, args=args, method=c.solver['name'], 
+                        no_local_search=c.solver['no_local_search'])
+    else:
+        xopt = minimize(objective_funct, params, args=args, method=c.solver['name'])
     
-    
+    #xopt = minimize(objective_funct, params, args=args, method='differential_evolution',
+    #                popsize=c.generations_count, max_nfev=c.iterations_count, mutation=(0.1, 0.9))
     
     
     #xopt = minimize(objective_funct, params, args=args, method='brute')

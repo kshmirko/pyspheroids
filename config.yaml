@@ -1,4 +1,4 @@
-input_fname:			"input1.dat"
+input_fname: 			"input1.dat"
 wavelengths_count:		3
 extinction_count:		2
 depolarization_count:	0
@@ -15,23 +15,23 @@ solver:
   no_local_search: False
 
 lnN1_lo:	-30
-lnN1_hi: -20.0
+lnN1_hi: 2.0
 sigma1_lo: 0.15
 sigma1_hi: 0.8
 rm1_lo: 0.05
 rm1_hi: 0.3
-lnN2_lo:	-30
-lnN2_hi: -20.0
+lnN2_lo:	-40
+lnN2_hi: 2.0
 sigma2_lo: 0.15
 sigma2_hi: 0.8
 rm2_lo: 0.31
 rm2_hi: 0.8
 rn_lo: 1.3
-rn_hi: 1.69
+rn_hi: 1.45
 lnrk_lo: -16
 lnrk_hi: -3
 interp_wavelengths:		[0.355, 0.4, 0.532, 0.6, 0.8, 1.064]
-meas_vector:			[0.0043,	0.001629406,	0.001437189,	0.08598,	0.02442	]
+meas_vector:			[3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]
 meas_data:
   - [0.00131315,	0.001055597,	0.000129503,	0.051535,	0.009548333]
   - [3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]

@@ -122,7 +122,7 @@ def print_module_content(config):
 
             print("{0:30s}\t=\t{1}".format(name, tmpval))
             if name == 'meas_vector':
-                tmpval = tmpval*1e-9
+                tmpval = tmpval
             setattr(config, name, tmpval)
     print()
 
@@ -264,7 +264,7 @@ def main():
     config_modname = sys.argv[1]
     c = load_config_yaml(config_modname)
     print_module_content(c)
-    prepare_dataset(c)
+    
     p = Params(6)
     
     
@@ -298,61 +298,60 @@ def main():
     libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
                                  libspheroids.mo_dls.keyel, 1)
 
-    #xopt = minimize(objective_funct, params, args=args, method='emcee', \
-    #                 float_behavior='chi2',\
-    #                 burn=70, is_weighted=True, steps=1000, nwalkers=100)
+    data_count = c.meas_data.shape[0]
+    for i, v in enumerate(c.meas_data):
+        print('Prosessing data {elem}/{tot}...'.format(elem=i, tot=data_count), file=sys.stderr)
+        
+        c.meas_vector = v
+        # подготоавливаем данные к расчетам
+        prepare_dataset(c)
     
-    # xopt = minimize(objective_funct, params, args=args, method='dual_annealing',
-    #                 no_local_search=False)
-    if c.solver['name']=='dual_annealing':
-        xopt = minimize(objective_funct, params, args=args, method=c.solver['name'], 
-                        no_local_search=c.solver['no_local_search'])
-    else:
-        xopt = minimize(objective_funct, params, args=args, method=c.solver['name'])
+        if c.solver['name']=='dual_annealing':
+            xopt = minimize(objective_funct, params, args=args, method=c.solver['name'], 
+                            no_local_search=c.solver['no_local_search'])
+        else:
+            xopt = minimize(objective_funct, params, args=args, method=c.solver['name'])
     
-    #xopt = minimize(objective_funct, params, args=args, method='differential_evolution',
-    #                popsize=c.generations_count, max_nfev=c.iterations_count, mutation=(0.1, 0.9))
-    
-    
-    #xopt = minimize(objective_funct, params, args=args, method='brute')
-    
-    print(fit_report(xopt))
-    fval = objective_funct(xopt.params,  c, p)
+        print("000000000000000000000000000000000000000000000000000")
+        print("Results of processing {elem} dataset".format(elem=i))
+        
+        print(fit_report(xopt))
+        fval = objective_funct(xopt.params,  c, p)
     
 
-    print()
-    print(" ==============================")
-    print(" =   Результаты расчетов.     =")
-    print(" ==============================")
-    print()
-    
-    with printoptions(formatter={'float': '{: 0.2e}'.format}):
-        print("Fmin  value (R^2): ", (fval*fval).sum())
         print()
-        print("Optimal parameters:")
-        print("-------------------")
+        print(" ==============================")
+        print(" =   Результаты расчетов.     =")
+        print(" ==============================")
+        print()
+    
+        with printoptions(formatter={'float': '{: 0.2e}'.format}):
+            print("Fmin  value (R^2): ", (fval*fval).sum())
+            print()
+            print("Optimal parameters:")
+            print("-------------------")
         
-        xopt.params.pretty_print()
-        print()
-        print("{0:20s}|{1:20s}|{2:20s}".format("meas_vector","meas_vect. interp.","calc_vect."))
-        for i,_ in enumerate(p.calc_vector):
-            if i<len(c.meas_vector):
-                print("{0:20.3e} {1:20.3e} {2:20.3e}".format(c.meas_vector[i], 
-                    c.meas_vector_interp[i], p.calc_vector[i]))
-            else:
-                print("{0:>20s} {1:20.3e} {2:20.3e}".format("--", 
-                    c.meas_vector_interp[i], p.calc_vector[i]))
-        # print("meas_vect.           : ", c.meas_vector)
-#         print("meas_vect. interp.   : ", c.meas_vector_interp[:6])
-#         print("                     : ", c.meas_vector_interp[6:])
-#         print("calc_vect.           : ", p.calc_vector)
+            xopt.params.pretty_print()
+            print()
+            print("{0:20s}|{1:20s}|{2:20s}".format("meas_vector","meas_vect. interp.","calc_vect."))
+            for i,_ in enumerate(p.calc_vector):
+                if i<len(c.meas_vector):
+                    print("{0:20.3e} {1:20.3e} {2:20.3e}".format(c.meas_vector[i], 
+                        c.meas_vector_interp[i], p.calc_vector[i]))
+                else:
+                    print("{0:>20s} {1:20.3e} {2:20.3e}".format("--", 
+                        c.meas_vector_interp[i], p.calc_vector[i]))
+            # print("meas_vect.           : ", c.meas_vector)
+    #         print("meas_vect. interp.   : ", c.meas_vector_interp[:6])
+    #         print("                     : ", c.meas_vector_interp[6:])
+    #         print("calc_vect.           : ", p.calc_vector)
     
-    print()
-    print("%13s|%13s|%13s"%("A=meas_vect.","B=calc_vect.","(A-B)/A*100%" ))
-    for i, _ in enumerate(c.meas_vector_interp):
-        print("%13.3e|%13.3e|%7.2f" % (c.meas_vector_interp[i]*1e9, p.calc_vector[i]*1e9,
-                                        (c.meas_vector_interp[i]-p.calc_vector[i])/c.meas_vector_interp[i]*100)
-                                        )
+        print()
+        print("%13s|%13s|%13s"%("A=meas_vect.","B=calc_vect.","(A-B)/A*100%" ))
+        for i, _ in enumerate(c.meas_vector_interp):
+            print("%13.3e|%13.3e|%7.2f" % (c.meas_vector_interp[i], p.calc_vector[i],
+                                            (c.meas_vector_interp[i]-p.calc_vector[i])/c.meas_vector_interp[i]*100)
+                                            )
 
     
 

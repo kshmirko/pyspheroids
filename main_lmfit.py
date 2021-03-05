@@ -349,7 +349,8 @@ def main():
     # освобождаем память
     libspheroids.alloc_dls_array(libspheroids.mo_dls.key,
                                  libspheroids.mo_dls.keyel, 2)
-    display_solution(c, p, xopt)
+    if c.plot_solution:
+        display_solution(c, p, xopt)
     
     
 

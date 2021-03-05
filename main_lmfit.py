@@ -97,8 +97,8 @@ def prepare_dataset(c):
     
     Итого вместо 5 уравнений будем иметь 12 (по 6 на кадый коэффициент)
     """
-    setattr(c,'c1',np.polyfit(np.log(c.wavelengths), np.log(c.meas_vector[:3]), deg=1))
-    setattr(c,'c2',np.polyfit(np.log(c.wavelengths[:2]), np.log(c.meas_vector[-2:]), deg=1))
+    setattr(c,'c1', np.polyfit(np.log(c.wavelengths), np.log(c.meas_vector[:3]), deg=1))
+    setattr(c,'c2', np.polyfit(np.log(c.wavelengths[:2]), np.log(c.meas_vector[-2:]), deg=1))
     y1 = np.exp(np.polyval(c.c1, np.log(c.interp_wavelengths)))
     y2 = np.exp(np.polyval(c.c2, np.log(c.interp_wavelengths)))
     setattr(c,'meas_vector_interp', np.r_[y1, y2])
@@ -188,23 +188,17 @@ def objective_funct(params, c, p):
 
     # Если выбрали логнормальное распределение, то
     # число параметров в векторе x должно быть равно 5
-    lnN1 = params['lnN1']
-    sigma1 = params['sigma1']
-    rm1 = params['rm1']
-    lnN2 = params['lnN2']
-    sigma2 = params['sigma2']
-    rm2 = params['rm2']
-    rn = params['rn']
-    rk = params['rk']
+    lnN1 = params['lnN1'].value
+    sigma1 = params['sigma1'].value
+    rm1 = params['rm1'].value
+    lnN2 = params['lnN2'].value
+    sigma2 = params['sigma2'].value
+    rm2 = params['rm2'].value
+    rn = params['rn'].value
+    rk = params['rk'].value
     
     if c.funct_type == 0:
-
-        rr, ar, ac = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1), np.exp(lnN2)],
-                                            [sigma1, sigma2], [rm1, rm2], c.r_min, c.r_max)
-        # rr1, ar1, ac1 = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1) ],
-        #                                    [sigma1], [rm1], c.r_min, c.r_max)
-        # _, ar2, _ = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN2) ],
-        #                                    [sigma2], [rm2], c.r_min, c.r_max)
+        rr, ar, ac = libspheroids.sizedis2(-c.knots_count, [np.exp(lnN1), np.exp(lnN2)], [sigma1, sigma2], [rm1, rm2], c.r_min, c.r_max)
         libspheroids.mo_dls.rn.flat[0] = rn
         libspheroids.mo_dls.rk.flat[0] = np.exp(rk)
         libspheroids.mo_dls.sd[:] = ar[:]
@@ -301,7 +295,7 @@ def main():
     data_count = c.meas_data.shape[0]
     for i, v in enumerate(c.meas_data):
         print('Prosessing data {elem}/{tot}...'.format(elem=i, tot=data_count), file=sys.stderr)
-        
+        print(v)
         c.meas_vector = v
         # подготоавливаем данные к расчетам
         prepare_dataset(c)
@@ -341,10 +335,7 @@ def main():
                 else:
                     print("{0:>20s} {1:20.3e} {2:20.3e}".format("--", 
                         c.meas_vector_interp[i], p.calc_vector[i]))
-            # print("meas_vect.           : ", c.meas_vector)
-    #         print("meas_vect. interp.   : ", c.meas_vector_interp[:6])
-    #         print("                     : ", c.meas_vector_interp[6:])
-    #         print("calc_vect.           : ", p.calc_vector)
+
     
         print()
         print("%13s|%13s|%13s"%("A=meas_vect.","B=calc_vect.","(A-B)/A*100%" ))

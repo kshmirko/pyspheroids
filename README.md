@@ -218,5 +218,73 @@ meas_vector         |meas_vect. interp.  |calc_vect.
 Отрисовка графиков предполагается с использованием пакета matplotlib.
 
 
+# Основные настройки программы
+все настройки программы определяются файлом config.yaml. 
+
+Его структура следующая
+
+```
+input_fname: 			"input1.dat"
+wavelengths_count:		3
+extinction_count:		2
+depolarization_count:	0
+wavelengths:			[0.355, 0.532, 1.064]
+discrepancy_kind:		0  
+funct_type:				0  
+knots_count:			22
+r_min:					0.05
+r_max:					5.0
+threshold:				45.0  # %
+
+solver:
+  name: powel
+  no_local_search: False
+
+lnN1_lo:	-30
+lnN1_hi: 2.0
+sigma1_lo: 0.15
+sigma1_hi: 0.8
+rm1_lo: 0.05
+rm1_hi: 0.3
+lnN2_lo:	-40
+lnN2_hi: 2.0
+sigma2_lo: 0.15
+sigma2_hi: 0.8
+rm2_lo: 0.31
+rm2_hi: 0.8
+rn_lo: 1.3
+rn_hi: 1.45
+lnrk_lo: -16
+lnrk_hi: -3
+interp_wavelengths:		[0.355, 0.4, 0.532, 0.6, 0.8, 1.064]
+meas_vector:			[3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]
+plot_solution: False
+meas_data:
+  - [0.00131315,	0.001055597,	0.000129503,	0.051535,	0.009548333]
+  - [3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]
+  - [6.90E-03,	5.64E-03,	3.20E-03,	1.53E-01,	1.22E-01]
+  - [0.0043,	0.001629406,	0.001437189,	0.08598,	0.02442]
+
+```
+
+`input_fname`  - определяет настройки самого алгоритма расчета микрофизических свойств, там частиц, их характеристики
+
+`wavelengths_count` - количество длин волн
+
+`extinction_count` - количество коэффициентов экстинкии используемых в решении задачи
+
+`depolarization_count`  - количество коэффициентов деполяризации, учавствуюших в решении
+
+`wavelengths` - список длин волн в порядке возрастания
+
+`discrepancy_kind` - способ вычисления невязки 0|1
+
+`func_type` - тип апроксимирующей функции 0|1
+
+`knots_count` - число узловых точек для построения решения (22)
+
+
+
+
 
 

@@ -30,5 +30,6 @@ if __name__ == "__main__":
           " of spherical aerosols",
           author="Constantine Shmirko",
           author_email="kshmirko@gmail.com",
-          ext_modules=[extension]
+          ext_modules=[extension],
+	  setup_requires=['wheel']
           )

@@ -443,3 +443,52 @@ SUBROUTINE SIZEDIS2(KN,NMD,CM,SM,RMM,RMIN,RMAX,RRR,AR,AC)
 	SD(1:(-KN)) = AR(1:(-KN))
 	
 end subroutine SIZEDIS2
+
+
+SUBROUTINE SIZEDISN(KN,NMD,CM,SM,RMM,RMIN,RMAX,RRR,AR,AC) 
+!C*********************************************************************
+!C**     Determining bi-modal LogNormal size distribution:           **
+!C**         d(...)/dlnR in KN - grid radius points                  **
+!C*********************************************************************
+!C INPUT:
+!C************
+!C  KN   I(NSD) - number of radius points
+!C        <0 logarithmic intervals
+!C        >0 linear intervals
+!C  IA   I  - defines quadrature 
+!C     =0 - rectangular approximation
+!C     =1 - trapezoidal approximation
+!C  ID  I - dimension of d(...)/dlnR or d(...)/dR
+!C         = 0 - number
+!C         = 1 - radius
+!C         = 2 - area
+!C         = 3 - volume
+!C  NSD I    - number of size distributions (up to 3)
+!C  NMD I    - number of modes (up to 2)
+!C  CM  R(NMD,NSD) - concentrations
+!C  SM  R(NMD,NSD) - halfwidths 
+!C  RM  R(NMD,NSD) - mean radii (mkm)
+!C  RMIN  R(NSD) - minimum radius (mkm)
+!C  RMAX  R(NSD) - maximum radius (mkm)
+!C*****************************************************
+!C  OUTPUT:
+!C  RRR    R(NSD,KNpar) - Radii for Size Distribution
+!C  AR     R(KNpar) - d()/dlnR  or d()/dR (in M)
+!C  AC     R    - total concentration (M3/M3)
+!C*****************************************************
+ USE mo_par_DLS, only: KNpar
+ USE mo_DLS, only: SD
+	implicit none
+  INTEGER, INTENT(IN) ::  KN, NMD
+  REAL, INTENT(IN) :: CM(NMD),SM(NMD),RMM(NMD),RMIN,RMAX
+  REAL, INTENT(OUT) :: AR(KNpar), AC, RRR(KNpar)
+!cl      REAL CM0(NMD,NSD),SM0(NMD,NSD),RMM0(NMD,NSD)
+  
+	integer ia, id, IDBG
+	IA=1
+	ID=0
+	IDBG=0
+	call SIZEDISDN(KN,IA,ID,NMD,CM,SM,RMM,RMIN,RMAX,RRR,AR,AC,KNpar,IDBG)
+	SD(1:(-KN)) = AR(1:(-KN))
+	
+end subroutine SIZEDISN

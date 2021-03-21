@@ -16,13 +16,13 @@ solver:
 
 lnN1_lo:	-30
 lnN1_hi: 2.0
-sigma1_lo: 0.15
+sigma1_lo: 0.12
 sigma1_hi: 0.8
 rm1_lo: 0.05
 rm1_hi: 0.3
 lnN2_lo:	-40
 lnN2_hi: 2.0
-sigma2_lo: 0.15
+sigma2_lo: 0.12
 sigma2_hi: 0.8
 rm2_lo: 0.31
 rm2_hi: 0.8
@@ -32,7 +32,7 @@ lnrk_lo: -16
 lnrk_hi: -3
 interp_wavelengths:		[0.355, 0.4, 0.532, 0.6, 0.8, 1.064]
 meas_vector:			[3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]
-plot_solution: False
+plot_solution: True
 meas_data:
   - [0.00131315,	0.001055597,	0.000129503,	0.051535,	0.009548333]
   - [3.53E-02,	1.71E-02,	6.05E-03,	4.19E-01,	2.84E-01]

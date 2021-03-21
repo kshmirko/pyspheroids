@@ -64,6 +64,22 @@ class Params:
 def ln_funct(x, lnN, sigma, rm):
     return np.exp(lnN)/(np.sqrt(2*np.pi)*sigma)*np.exp(-0.5*((np.log(x)-np.log(rm))/sigma)**2)
 
+def print_params_n(xopt):
+    V1 = np.exp(xopt.params['lnN1'].value)
+    V2 = np.exp(xopt.params['lnN2'].value)
+    S1 = xopt.params['sigma1'].value
+    S2 = xopt.params['sigma2'].value
+    Rv1= xopt.params['rm1'].value
+    Rv2= xopt.params['rm2'].value
+    
+    Rm1 = Rv1 - 3*S1**2
+    Rm2 = Rv2 - 3*S2**2
+    
+    N1 = V1/(3/4*np.pi*np.exp(3*Rm1+4.5*S1**2))
+    N2 = V2/(3/4*np.pi*np.exp(3*Rm2+4.5*S2**2))
+    print("N1={0}, Rm1={1}, S1={2}".format(N1, Rm1, S1))
+    print("N2={0}, Rm2={1}, S2={2}".format(N2, Rm2, S2))
+
 def load_config_yaml(yaml_fname):
     """
     Читаем файл yaml и создаем объект,
@@ -307,8 +323,9 @@ def main():
         print("Results of processing {elem} dataset".format(elem=i))
         
         print(fit_report(xopt))
+        print_params_n(xopt)
         fval = objective_funct(xopt.params,  c, p)
-    
+        
 
         print()
         print(" ==============================")

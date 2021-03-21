@@ -350,6 +350,7 @@ meas_data:
 
 # установка #
 
+``` bash
 git clone https://github.com/kshmirko/pyspheroids.git
 cd pyspheroid
 python setup.py install

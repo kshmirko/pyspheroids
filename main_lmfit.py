@@ -102,8 +102,7 @@ def prepare_dataset(c):
     y1 = np.exp(np.polyval(c.c1, np.log(c.interp_wavelengths)))
     y2 = np.exp(np.polyval(c.c2, np.log(c.interp_wavelengths)))
     setattr(c,'meas_vector_interp', np.r_[y1, y2])
-    
-    
+        
 def print_module_content(config):
   # печатаем параметры запуска
     print()
@@ -125,6 +124,7 @@ def print_module_content(config):
                 tmpval = tmpval
             setattr(config, name, tmpval)
     print()
+
 
 
 def display_solution(c, p, xopt):
@@ -177,7 +177,6 @@ def display_solution(c, p, xopt):
     print(p.lidar_depol_ratio)
     print(p.back_lidar_ratio)
     plt.show()
-
 
 def objective_funct(params, c, p):
     """
@@ -242,8 +241,6 @@ def objective_funct(params, c, p):
     func_val = ((p.calc_vector-c.meas_vector_interp))/(c.meas_vector_interp)
     return func_val
     
-    
-
 def main():
     """
     Основная функция

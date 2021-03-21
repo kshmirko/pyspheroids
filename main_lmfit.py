@@ -11,20 +11,16 @@
 import sys
 import importlib
 import numpy as np
-from matplotlib import pyplot as plt
 
 from lmfit import minimize, Parameters, fit_report
 
 import libspheroids
-from dataclasses import dataclass
 import contextlib
 
-import matplotlib.ticker as ticker
-import matplotlib as mpl
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif"})
-    
+
+from prepare import Config, Params
+from display import display_solution
+from functions import ln_funct
 
 @contextlib.contextmanager
 def printoptions(*args, **kwargs):
@@ -35,34 +31,6 @@ def printoptions(*args, **kwargs):
     finally: 
         np.set_printoptions(**original)
 
-
-class Config:
-    pass
-
-@dataclass
-class Params:
-    n_coefs: int
-    extinction_coeff: np.ndarray
-    absorbption_coeff: np.ndarray
-    backscatter_coeff: np.ndarray
-    lidar_depol_ratio: np.ndarray
-    calc_vector: np.ndarray
-    meas_vector: np.ndarray
-    back_lidar_ratio: np.ndarray
-    
-    def __init__(self, N):
-        self.n_coefs = N
-        self.extinction_coeff = np.zeros(self.n_coefs, dtype='float64')
-        self.absorbption_coeff = np.zeros_like(self.extinction_coeff)
-        self.backscatter_coeff = np.zeros_like(self.extinction_coeff)
-        self.lidar_depol_ratio = np.zeros_like(self.extinction_coeff)
-        self.calc_vector = np.zeros(self.n_coefs*2, dtype='float64')
-        self.meas_vector = np.zeros_like(self.extinction_coeff)
-        self.back_lidar_ratio = np.zeros_like(self.extinction_coeff)
-
-
-def ln_funct(x, lnN, sigma, rm):
-    return np.exp(lnN)/(np.sqrt(2*np.pi)*sigma)*np.exp(-0.5*((np.log(x)-np.log(rm))/sigma)**2)
 
 def print_params_n(xopt):
     V1 = np.exp(xopt.params['lnN1'].value)
@@ -75,8 +43,8 @@ def print_params_n(xopt):
     Rm1 = Rv1 - 3*S1**2
     Rm2 = Rv2 - 3*S2**2
     
-    N1 = V1/(3/4*np.pi*np.exp(3*Rm1+4.5*S1**2))
-    N2 = V2/(3/4*np.pi*np.exp(3*Rm2+4.5*S2**2))
+    N1 = V1/(4/3*np.pi*np.exp(3*Rm1+4.5*S1**2))
+    N2 = V2/(4/3*np.pi*np.exp(3*Rm2+4.5*S2**2))
     print("N1={0}, Rm1={1}, S1={2}".format(N1, Rm1, S1))
     print("N2={0}, Rm2={1}, S2={2}".format(N2, Rm2, S2))
 
@@ -140,59 +108,6 @@ def print_module_content(config):
                 tmpval = tmpval
             setattr(config, name, tmpval)
     print()
-
-
-
-def display_solution(c, p, xopt):
-    """docstring for display_solution"""
-    grid = plt.GridSpec(3,2)
-    plt.subplot(grid[0,0])
-    plt.semilogy(c.interp_wavelengths, p.calc_vector[:6], 'b')
-    plt.semilogy(c.interp_wavelengths, c.meas_vector_interp[:6],'bo')
-    plt.ylabel(r'Back. coeff. 1/km $\times$ sr', color='b')
-    plt.grid(which='major')
-    plt.grid(which='minor', linestyle=':')
-    
-    #print(c.wavelengths[:2], p.calc_vector[-2:], c.meas_vector[-2:])
-    plt.subplot(grid[1,0])
-    plt.semilogy(c.interp_wavelengths, p.calc_vector[6:],'g')
-    plt.semilogy(c.interp_wavelengths, c.meas_vector_interp[6:], 'go')
-    plt.ylabel(r'Ext. coeff. 1/km', color='g')
-    plt.grid(which='major')
-    plt.grid(which='minor', linestyle=':')
-    
-    
-    plt.subplot(grid[2,0])
-    plt.plot(c.interp_wavelengths, p.calc_vector[6:]/p.calc_vector[:6], 'r')
-    plt.plot(c.interp_wavelengths, c.meas_vector_interp[6:]/c.meas_vector_interp[:6], 'ro')
-    plt.ylabel('LR ratio sr', color='r')
-    plt.grid(which='major')
-    plt.grid(which='minor', linestyle=':')
-    plt.xlabel('Wavelength, nm')
-    
-    plt.subplot(grid[0,1])
-    plt.plot(c.interp_wavelengths, p.lidar_depol_ratio, 'kd-')
-    plt.ylabel(r'lid. dep. rat., \%')
-    plt.xlabel('Wavelength, nm')
-    plt.grid(which='major')
-    plt.grid(which='minor', linestyle=':')
-    
-    rr = np.logspace(np.log10(c.r_min), np.log10(c.r_max), 50)
-    plt.subplot(grid[1:,1])
-    plt.semilogx(rr, ln_funct(rr, xopt.params['lnN1'].value, xopt.params['sigma1'].value, xopt.params['rm1'].value), 'b-')
-    plt.semilogx(rr, ln_funct(rr, xopt.params['lnN2'].value, xopt.params['sigma2'].value, xopt.params['rm2'].value), 'g-')
-    plt.semilogx(libspheroids.mo_dls.rrr[:c.knots_count], libspheroids.mo_dls.sd[:c.knots_count], 'ro', mfc=None)
-    plt.ylabel(r'$\frac{dV}{d\ln r}$, $\frac{\mu m^3}{\mu m^3}$')
-    plt.xlabel(r'Radius, $\mu m$')
-    plt.grid(which='major')
-    plt.grid(which='minor', linestyle=':')
-    
-    plt.suptitle('Lidar measurements processing results', fontsize="x-large")
-    plt.tight_layout()
-    print(c.interp_wavelengths)
-    print(p.lidar_depol_ratio)
-    print(p.back_lidar_ratio)
-    plt.show()
 
 def objective_funct(params, c, p):
     """

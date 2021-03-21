@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib.ticker as ticker
 import matplotlib as mpl
-from functions import ln_funct
+from utils.functions import ln_funct
 import libspheroids
 
 plt.rcParams.update({

@@ -13,14 +13,12 @@ import importlib
 import numpy as np
 
 from lmfit import minimize, Parameters, fit_report
-
 import libspheroids
 import contextlib
 
-
-from prepare import Config, Params
-from display import display_solution
-from functions import ln_funct
+from utils.prepare import Config, Params
+from utils.display import display_solution
+from utils.functions import ln_funct
 
 @contextlib.contextmanager
 def printoptions(*args, **kwargs):

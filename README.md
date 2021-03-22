@@ -359,6 +359,7 @@ python setup.py install
 
 и запускаем ./main_lmfit.py config.yaml
 
+```
 
 # Модификация
 
